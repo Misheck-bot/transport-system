@@ -5,7 +5,11 @@ if (!process.env.MONGODB_URI) {
 }
 
 const uri = process.env.MONGODB_URI
-const options = {}
+const options = {
+  maxPoolSize: 10,
+  serverSelectionTimeoutMS: 5000,
+  socketTimeoutMS: 45000,
+}
 
 let client: MongoClient
 let clientPromise: Promise<MongoClient>
@@ -28,9 +32,32 @@ if (process.env.NODE_ENV === "development") {
   clientPromise = client.connect()
 }
 
+// Export a module-scoped MongoClient promise. By doing this in a
+// separate module, the client can be shared across functions.
 export default clientPromise
 
+// Helper function to get database
 export async function getDatabase(): Promise<Db> {
   const client = await clientPromise
   return client.db("etruck_system")
+}
+
+// Helper function for backward compatibility
+export async function connectToDatabase(): Promise<{ db: Db; client: MongoClient }> {
+  const client = await clientPromise
+  const db = client.db("etruck_system")
+  return { db, client }
+}
+
+// Helper function to test connection
+export async function testConnection(): Promise<boolean> {
+  try {
+    const client = await clientPromise
+    await client.db("admin").command({ ping: 1 })
+    console.log("✅ MongoDB connection successful")
+    return true
+  } catch (error) {
+    console.error("❌ MongoDB connection failed:", error)
+    return false
+  }
 }

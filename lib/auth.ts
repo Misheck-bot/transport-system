@@ -6,52 +6,55 @@ import { getDatabase } from "./mongodb"
 export interface User {
   _id: string
   email: string
-  firstName: string
-  lastName: string
-  role: "driver" | "agent" | "admin"
-  phone: string
+  name: string
+  role?: "driver" | "agent" | "admin"
+  phone?: string
   isVerified: boolean
   createdAt: Date
 }
 
-export const authOptions: NextAuthOptions = {
+export const authOptions = {
   providers: [
     CredentialsProvider({
       name: "credentials",
       credentials: {
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
-        role: { label: "Role", type: "text" },
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) {
+          console.log("Missing credentials")
           return null
         }
 
         try {
+          console.log("Attempting to authenticate user:", credentials.email)
           const db = await getDatabase()
           const user = await db.collection("users").findOne({
             email: credentials.email.toLowerCase(),
           })
 
           if (!user) {
+            console.log("User not found:", credentials.email)
             return null
           }
 
+          console.log("User found, checking password...")
           const isPasswordValid = await bcrypt.compare(credentials.password, user.password)
 
           if (!isPasswordValid) {
+            console.log("Invalid password for user:", credentials.email)
             return null
           }
 
+          console.log("User authenticated successfully:", user.email, "Role:", user.role)
           return {
             id: user._id.toString(),
             email: user.email,
-            firstName: user.firstName,
-            lastName: user.lastName,
-            role: user.role,
-            phone: user.phone,
-            isVerified: user.isVerified,
+            name: user.name || `${user.firstName} ${user.lastName}`,
+            role: user.role || "driver", // Default to driver if no role specified
+            phone: user.phone || null,
+            isVerified: user.isVerified || false,
           }
         } catch (error) {
           console.error("Auth error:", error)
@@ -62,24 +65,23 @@ export const authOptions: NextAuthOptions = {
   ],
   session: {
     strategy: "jwt",
+    maxAge: 30 * 24 * 60 * 60, // 30 days
   },
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
         token.role = user.role
-        token.firstName = user.firstName
-        token.lastName = user.lastName
+        token.name = user.name
         token.phone = user.phone
         token.isVerified = user.isVerified
       }
       return token
     },
     async session({ session, token }) {
-      if (token) {
+      if (token && session.user) {
         session.user.id = token.sub!
         session.user.role = token.role as string
-        session.user.firstName = token.firstName as string
-        session.user.lastName = token.lastName as string
+        session.user.name = token.name as string
         session.user.phone = token.phone as string
         session.user.isVerified = token.isVerified as boolean
       }
@@ -90,4 +92,6 @@ export const authOptions: NextAuthOptions = {
     signIn: "/login",
     error: "/login",
   },
+  secret: process.env.NEXTAUTH_SECRET,
+  debug: process.env.NODE_ENV === "development",
 }

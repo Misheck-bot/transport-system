@@ -1,8 +1,10 @@
-import type React from "react"
-import Link from "next/link"
-import { Bell, Shield, User, Settings, LogOut, FileText, Home, Users, BarChart3, Database, Cog } from "lucide-react"
+"use client"
+
+import { useState, useEffect } from "react"
+import { useSession, signOut } from "next-auth/react"
+import { useRouter, usePathname } from "next/navigation"
+import { ArrowLeft, Bell, User, Settings, LogOut, Shield } from 'lucide-react'
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -11,127 +13,177 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import Image from "next/image"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Badge } from "@/components/ui/badge"
+import Link from "next/link"
 
-const navItems = [
-  { href: "/dashboard/admin", icon: Home, label: "Dashboard", badge: 0 },
-  { href: "/dashboard/admin/users", icon: Users, label: "User Management", badge: 5 },
-  { href: "/dashboard/admin/analytics", icon: BarChart3, label: "Analytics", badge: 0 },
-  { href: "/dashboard/admin/database", icon: Database, label: "Database", badge: 0 },
-  { href: "/dashboard/admin/system", icon: Cog, label: "System Config", badge: 2 },
-]
-
-export default function AdminDashboardLayout({
+export default function AdminLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
+  const { data: session } = useSession()
+  const router = useRouter()
+  const pathname = usePathname()
+  const [notificationCount, setNotificationCount] = useState(0)
+  const [isLoadingNotifications, setIsLoadingNotifications] = useState(false)
+
+  const isMainDashboard = pathname === "/dashboard/admin"
+
+  useEffect(() => {
+    fetchNotificationCount()
+    // Set up polling for notifications every 30 seconds
+    const interval = setInterval(fetchNotificationCount, 30000)
+    return () => clearInterval(interval)
+  }, [])
+
+  const fetchNotificationCount = async () => {
+    try {
+      setIsLoadingNotifications(true)
+      const response = await fetch("/api/admin/notifications")
+      if (response.ok) {
+        const data = await response.json()
+        setNotificationCount(data.unreadCount || 0)
+      }
+    } catch (error) {
+      console.error("Error fetching notifications:", error)
+    } finally {
+      setIsLoadingNotifications(false)
+    }
+  }
+
+  const handleSignOut = async () => {
+    await signOut({ callbackUrl: "/login" })
+  }
+
+  const handleBackClick = () => {
+    router.push("/dashboard/admin")
+  }
+
+  const handleNotificationClick = () => {
+    // For now, just refresh the count
+    fetchNotificationCount()
+  }
+
+  const getPageTitle = () => {
+    const pathSegments = pathname.split("/")
+    const lastSegment = pathSegments[pathSegments.length - 1]
+    
+    switch (lastSegment) {
+      case "users": return "User Management"
+      case "payments": return "Payment Management"
+      case "analytics": return "Analytics & Reports"
+      case "database": return "Database Management"
+      case "system": return "System Configuration"
+      case "profile": return "Admin Profile"
+      default: return "Admin Dashboard"
+    }
+  }
+
   return (
-    <div className="grid min-h-screen w-full grid-cols-[240px_1fr] md:grid-cols-1 lg:grid-cols-1">
-      {/* Sidebar - Visible on Mobile, Hidden on Desktop */}
-      <div className="border-r bg-secondary/60 md:hidden">
-        <div className="flex h-full max-h-screen flex-col gap-2">
-          <div className="flex h-16 items-center border-b px-4 lg:h-[68px] lg:px-6">
-            <Link href="/" className="flex items-center gap-2 font-semibold">
-              <div className="bg-gradient-to-r from-purple-500 to-indigo-600 p-2 rounded-xl">
-                <Shield className="h-6 w-6 text-white" />
-              </div>
-              <span className="text-lg bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">
-                Admin Portal
-              </span>
-            </Link>
-          </div>
-          <div className="flex-1">
-            <nav className="grid items-start px-2 text-sm font-medium lg:px-4 py-4">
-              {navItems.map((item) => (
-                <Link
-                  key={item.label}
-                  href={item.href}
-                  className="flex items-center gap-3 rounded-lg px-3 py-3 text-muted-foreground transition-all hover:text-primary hover:bg-primary/10"
+    <div className="min-h-screen bg-gray-50">
+      {/* Header - Full Width */}
+      <header className="bg-white border-b border-gray-200 shadow-sm sticky top-0 z-50">
+        <div className="px-6 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              {!isMainDashboard && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleBackClick}
+                  className="gap-2 hover:bg-gray-100"
                 >
-                  <item.icon className="h-4 w-4" />
-                  {item.label}
-                  {item.badge > 0 && (
-                    <Badge className="ml-auto flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-orange-500 text-white">
-                      {item.badge}
-                    </Badge>
-                  )}
-                </Link>
-              ))}
-            </nav>
-          </div>
-          <div className="mt-auto p-4">
-            <div className="bg-gradient-to-r from-purple-50 to-indigo-50 border border-purple-200 rounded-lg p-4">
-              <h3 className="font-semibold text-purple-800 mb-2">System Status</h3>
-              <p className="text-sm text-purple-700 mb-3">
-                All systems operational. Monitor performance and manage configurations.
-              </p>
-              <Button size="sm" className="w-full bg-purple-600 hover:bg-purple-700 text-white">
-                System Health
+                  <ArrowLeft className="h-4 w-4" />
+                  Back
+                </Button>
+              )}
+              
+              <Link href="/dashboard/admin" className="flex items-center gap-3">
+                <div className="bg-gradient-to-r from-purple-500 to-indigo-600 p-2 rounded-xl">
+                  <Shield className="h-6 w-6 text-white" />
+                </div>
+                <div>
+                  <h1 className="text-xl font-bold text-gray-900">
+                    {getPageTitle()}
+                  </h1>
+                  <p className="text-sm text-gray-600">
+                    E-Truck Transport System
+                  </p>
+                </div>
+              </Link>
+            </div>
+
+            <div className="flex items-center gap-4">
+              {/* Notifications */}
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="relative hover:bg-gray-100"
+                onClick={handleNotificationClick}
+                disabled={isLoadingNotifications}
+              >
+                <Bell className={`h-5 w-5 ${isLoadingNotifications ? 'animate-pulse' : ''}`} />
+                {notificationCount > 0 && (
+                  <Badge className="absolute -top-1 -right-1 h-5 w-5 rounded-full p-0 text-xs bg-red-500 text-white flex items-center justify-center">
+                    {notificationCount > 99 ? '99+' : notificationCount}
+                  </Badge>
+                )}
+                <span className="sr-only">Notifications</span>
               </Button>
+
+              {/* Profile Dropdown */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" className="relative h-10 w-10 rounded-full hover:bg-gray-100">
+                    <Avatar className="h-10 w-10">
+                      <AvatarImage src="/placeholder-user.jpg" alt="Profile" />
+                      <AvatarFallback className="bg-purple-100 text-purple-700">
+                        {session?.user?.name?.charAt(0) || 'A'}
+                      </AvatarFallback>
+                    </Avatar>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="w-56" align="end" forceMount>
+                  <DropdownMenuLabel className="font-normal">
+                    <div className="flex flex-col space-y-1">
+                      <p className="text-sm font-medium leading-none">
+                        {session?.user?.name || 'Administrator'}
+                      </p>
+                      <p className="text-xs leading-none text-muted-foreground">
+                        {session?.user?.email}
+                      </p>
+                      <Badge variant="secondary" className="w-fit mt-1">
+                        <Shield className="h-3 w-3 mr-1" />
+                        Admin
+                      </Badge>
+                    </div>
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => router.push("/dashboard/admin/profile")}>
+                    <User className="mr-2 h-4 w-4" />
+                    <span>Profile Settings</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => router.push("/dashboard/admin/system")}>
+                    <Settings className="mr-2 h-4 w-4" />
+                    <span>System Settings</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={handleSignOut} className="text-red-600">
+                    <LogOut className="mr-2 h-4 w-4" />
+                    <span>Sign Out</span>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </div>
         </div>
-      </div>
+      </header>
 
-      <div className="flex flex-col">
-        {/* Header */}
-        <header className="flex h-16 items-center gap-4 border-b bg-white px-4 lg:h-[68px] lg:px-6 sticky top-0 z-30 shadow-sm">
-          <Link href="/" className="flex items-center gap-2 font-semibold">
-            <div className="bg-gradient-to-r from-purple-500 to-indigo-600 p-2 rounded-xl">
-              <Shield className="h-6 w-6 text-white" />
-            </div>
-            <span className="text-lg bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">
-              Admin Portal
-            </span>
-          </Link>
-          <div className="w-full flex-1">
-            <h1 className="text-lg font-semibold text-gray-900">System Administration</h1>
-          </div>
-          <Button variant="outline" size="sm" className="gap-2 bg-transparent">
-            <FileText className="h-4 w-4" />
-            Export Report
-          </Button>
-          <Button variant="ghost" size="icon" className="rounded-full">
-            <Bell className="h-5 w-5" />
-            <span className="sr-only">Toggle notifications</span>
-          </Button>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="secondary" size="icon" className="rounded-full">
-                <Image
-                  src="/placeholder.svg?width=40&height=40"
-                  width={40}
-                  height={40}
-                  alt="Avatar"
-                  className="rounded-full"
-                />
-                <span className="sr-only">Toggle user menu</span>
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56">
-              <DropdownMenuLabel>Admin Robert Phiri</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem>
-                <User className="mr-2 h-4 w-4" />
-                <span>Profile</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem>
-                <Settings className="mr-2 h-4 w-4" />
-                <span>Settings</span>
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem>
-                <LogOut className="mr-2 h-4 w-4" />
-                <span>Logout</span>
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </header>
-
-        {/* Main Content */}
-        <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-8 bg-gray-50">{children}</main>
-      </div>
+      {/* Main Content - Full Width */}
+      <main className="p-6 max-w-7xl mx-auto w-full">
+        {children}
+      </main>
     </div>
   )
 }

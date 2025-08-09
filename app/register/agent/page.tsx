@@ -1,5 +1,7 @@
 "use client"
 import { useState } from "react"
+import { useRouter } from "next/navigation"
+import { signIn } from "next-auth/react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -8,21 +10,31 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { Checkbox } from "@/components/ui/checkbox"
-import { Shield, User, FileText, MapPin, ArrowLeft, ArrowRight, LogIn } from "lucide-react"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Shield, User, FileText, MapPin, ArrowLeft, ArrowRight, Eye, EyeOff, Loader2, LogIn } from "lucide-react"
 
 export default function AgentRegistration() {
+  const router = useRouter()
   const [isLogin, setIsLogin] = useState(false)
+  const [step, setStep] = useState(1)
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState("")
+  const [showPassword, setShowPassword] = useState(false)
+
+  // Login form data
   const [loginData, setLoginData] = useState({
     email: "",
     password: "",
   })
 
-  const [step, setStep] = useState(1)
+  // Registration form data
   const [formData, setFormData] = useState({
     // Personal Information
     firstName: "",
     lastName: "",
     email: "",
+    password: "",
+    confirmPassword: "",
     phone: "",
     dateOfBirth: "",
     nationality: "",
@@ -68,13 +80,32 @@ export default function AgentRegistration() {
     setLoginData((prev) => ({ ...prev, [field]: value }))
   }
 
-  const handleLogin = () => {
-    console.log("Border Agent Login Data:", loginData)
-    window.location.href = "/dashboard/agent"
-  }
-
   const handleInputChange = (field: string, value: string | boolean) => {
     setFormData((prev) => ({ ...prev, [field]: value }))
+  }
+
+  const handleLogin = async () => {
+    setIsLoading(true)
+    setError("")
+
+    try {
+      const result = await signIn("credentials", {
+        email: loginData.email,
+        password: loginData.password,
+        redirect: false,
+      })
+
+      if (result?.error) {
+        setError("Invalid email or password")
+      } else {
+        // Redirect directly to agent dashboard
+        router.push("/dashboard/agent")
+      }
+    } catch (error) {
+      setError("An error occurred during login")
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   const handleNext = () => {
@@ -85,9 +116,54 @@ export default function AgentRegistration() {
     if (step > 1) setStep(step - 1)
   }
 
-  const handleSubmit = () => {
-    console.log("Border Agent Registration Data:", formData)
-    window.location.href = "/dashboard/agent"
+  const handleSubmit = async () => {
+    setIsLoading(true)
+    setError("")
+
+    // Validate passwords match
+    if (formData.password !== formData.confirmPassword) {
+      setError("Passwords do not match")
+      setIsLoading(false)
+      return
+    }
+
+    try {
+      const response = await fetch("/api/auth/role-register", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          role: "agent",
+          ...formData,
+        }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || "Registration failed")
+      }
+
+      // Auto-login after successful registration
+      const loginResult = await signIn("credentials", {
+        email: formData.email,
+        password: formData.password,
+        redirect: false,
+      })
+
+      if (loginResult?.error) {
+        // If auto-login fails, redirect to login page
+        router.push("/login?message=Registration successful! Please login to access your dashboard.")
+      } else {
+        // Redirect directly to agent dashboard
+        router.push("/dashboard/agent")
+      }
+    } catch (error: any) {
+      setError(error.message || "Registration failed. Please try again.")
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   // Login Form Component
@@ -96,12 +172,9 @@ export default function AgentRegistration() {
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-green-50 p-4">
         <div className="max-w-md mx-auto">
           <div className="text-center mb-8 pt-8">
-            <Link
-              href="/register-role"
-              className="inline-flex items-center gap-2 text-green-600 hover:text-green-700 mb-4"
-            >
+            <Link href="/" className="inline-flex items-center gap-2 text-green-600 hover:text-green-700 mb-4">
               <ArrowLeft className="h-4 w-4" />
-              Back to role selection
+              Back to home
             </Link>
             <div className="flex items-center justify-center gap-2 mb-4">
               <div className="bg-gradient-to-r from-green-500 to-emerald-600 p-2 rounded-xl">
@@ -122,6 +195,12 @@ export default function AgentRegistration() {
               <CardDescription>Sign in to access your border agent dashboard</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
+              {error && (
+                <Alert variant="destructive">
+                  <AlertDescription>{error}</AlertDescription>
+                </Alert>
+              )}
+
               <div>
                 <Label htmlFor="loginEmail">Official Email Address</Label>
                 <Input
@@ -131,19 +210,33 @@ export default function AgentRegistration() {
                   onChange={(e) => handleLoginInputChange("email", e.target.value)}
                   placeholder="agent@bordercontrol.gov"
                   required
+                  disabled={isLoading}
                 />
               </div>
 
               <div>
                 <Label htmlFor="loginPassword">Password</Label>
-                <Input
-                  id="loginPassword"
-                  type="password"
-                  value={loginData.password}
-                  onChange={(e) => handleLoginInputChange("password", e.target.value)}
-                  placeholder="Enter your password"
-                  required
-                />
+                <div className="relative">
+                  <Input
+                    id="loginPassword"
+                    type={showPassword ? "text" : "password"}
+                    value={loginData.password}
+                    onChange={(e) => handleLoginInputChange("password", e.target.value)}
+                    placeholder="Enter your password"
+                    required
+                    disabled={isLoading}
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                    onClick={() => setShowPassword(!showPassword)}
+                    disabled={isLoading}
+                  >
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </Button>
+                </div>
               </div>
 
               <div className="flex items-center justify-between text-sm">
@@ -155,8 +248,16 @@ export default function AgentRegistration() {
               <Button
                 onClick={handleLogin}
                 className="w-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700"
+                disabled={isLoading}
               >
-                Sign In to Dashboard
+                {isLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Signing in...
+                  </>
+                ) : (
+                  "Sign In to Dashboard"
+                )}
               </Button>
 
               <div className="text-center pt-4 border-t">
@@ -219,6 +320,43 @@ export default function AgentRegistration() {
                 placeholder="sarah.johnson@bordercontrol.gov"
                 required
               />
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="password">Password *</Label>
+                <div className="relative">
+                  <Input
+                    id="password"
+                    type={showPassword ? "text" : "password"}
+                    value={formData.password}
+                    onChange={(e) => handleInputChange("password", e.target.value)}
+                    placeholder="Create a secure password"
+                    required
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                    onClick={() => setShowPassword(!showPassword)}
+                  >
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </Button>
+                </div>
+              </div>
+
+              <div>
+                <Label htmlFor="confirmPassword">Confirm Password *</Label>
+                <Input
+                  id="confirmPassword"
+                  type="password"
+                  value={formData.confirmPassword}
+                  onChange={(e) => handleInputChange("confirmPassword", e.target.value)}
+                  placeholder="Confirm your password"
+                  required
+                />
+              </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
@@ -687,12 +825,9 @@ export default function AgentRegistration() {
       <div className="max-w-2xl mx-auto">
         {/* Header */}
         <div className="text-center mb-8 pt-8">
-          <Link
-            href="/register-role"
-            className="inline-flex items-center gap-2 text-green-600 hover:text-green-700 mb-4"
-          >
+          <Link href="/" className="inline-flex items-center gap-2 text-green-600 hover:text-green-700 mb-4">
             <ArrowLeft className="h-4 w-4" />
-            Back to role selection
+            Back to home
           </Link>
           <div className="flex items-center justify-center gap-2 mb-4">
             <div className="bg-gradient-to-r from-green-500 to-emerald-600 p-2 rounded-xl">
@@ -754,6 +889,12 @@ export default function AgentRegistration() {
             </CardDescription>
           </CardHeader>
           <CardContent>
+            {error && (
+              <Alert variant="destructive" className="mb-4">
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            )}
+
             {renderStep()}
 
             {/* Navigation Buttons */}
@@ -761,7 +902,7 @@ export default function AgentRegistration() {
               <Button
                 variant="outline"
                 onClick={handlePrevious}
-                disabled={step === 1}
+                disabled={step === 1 || isLoading}
                 className="flex items-center gap-2 bg-transparent"
               >
                 <ArrowLeft className="h-4 w-4" />
@@ -771,6 +912,7 @@ export default function AgentRegistration() {
               {step < 4 ? (
                 <Button
                   onClick={handleNext}
+                  disabled={isLoading}
                   className="flex items-center gap-2 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700"
                 >
                   Next
@@ -779,11 +921,25 @@ export default function AgentRegistration() {
               ) : (
                 <Button
                   onClick={handleSubmit}
-                  disabled={!formData.agreeTerms || !formData.agreeDataProcessing || !formData.agreeSecurityProtocols}
+                  disabled={
+                    !formData.agreeTerms ||
+                    !formData.agreeDataProcessing ||
+                    !formData.agreeSecurityProtocols ||
+                    isLoading
+                  }
                   className="flex items-center gap-2 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700"
                 >
-                  Complete Registration
-                  <ArrowRight className="h-4 w-4" />
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Creating Account...
+                    </>
+                  ) : (
+                    <>
+                      Complete Registration
+                      <ArrowRight className="h-4 w-4" />
+                    </>
+                  )}
                 </Button>
               )}
             </div>

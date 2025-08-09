@@ -3,31 +3,24 @@ declare module "next-auth" {
     user: {
       id: string
       email: string
-      firstName: string
-      lastName: string
-      role: "driver" | "agent" | "admin"
-      phone: string
-      isVerified: boolean
+      name: string
+      role: string
+      image?: string | null
     }
   }
 
   interface User {
     id: string
     email: string
-    firstName: string
-    lastName: string
-    role: "driver" | "agent" | "admin"
-    phone: string
-    isVerified: boolean
+    name: string
+    role: string
+    image?: string | null
   }
 }
 
 declare module "next-auth/jwt" {
   interface JWT {
+    id: string
     role: string
-    firstName: string
-    lastName: string
-    phone: string
-    isVerified: boolean
   }
 }

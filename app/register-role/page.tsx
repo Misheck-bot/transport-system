@@ -1,9 +1,11 @@
 "use client"
+import { useSession } from "next-auth/react"
+import { useRouter } from "next/navigation"
+import { useEffect } from "react"
 import Link from "next/link"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { User, Shield, Building, ArrowRight, Truck, CheckCircle, Clock } from "lucide-react"
-import { useState } from "react"
 
 const roles = [
   {
@@ -42,7 +44,38 @@ const roles = [
 ]
 
 export default function RegisterRolePage() {
-  const [selectedRole, setSelectedRole] = useState<string | null>(null)
+  const { data: session, status } = useSession()
+  const router = useRouter()
+
+  useEffect(() => {
+    if (status === "loading") return // Still loading
+
+    if (!session) {
+      router.push("/login")
+      return
+    }
+
+    // If user already has a role, redirect to their dashboard
+    if ((session.user as any)?.role) {
+      router.push(`/dashboard/${(session.user as any).role}`)
+      return
+    }
+  }, [session, status, router])
+
+  if (status === "loading") {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (!session) {
+    return null // Will redirect to login
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 p-4">
@@ -58,9 +91,15 @@ export default function RegisterRolePage() {
             </span>
           </div>
           <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">Choose Your Role</h1>
-          <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-            Select your role to access personalized features for truck transportation and border crossing management.
+          <p className="text-xl text-gray-600 max-w-2xl mx-auto mb-4">
+            Welcome {(session.user as any)?.name}! Select your role to access personalized features for truck transportation and
+            border crossing management.
           </p>
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 max-w-md mx-auto">
+            <p className="text-sm text-blue-800">
+              <strong>Logged in as:</strong> {(session.user as any)?.email}
+            </p>
+          </div>
         </div>
 
         {/* Role Cards */}
@@ -68,10 +107,7 @@ export default function RegisterRolePage() {
           {roles.map((role) => (
             <Card
               key={role.title}
-              className={`relative overflow-hidden border-2 transition-all duration-300 hover:shadow-2xl hover:scale-105 cursor-pointer ${
-                selectedRole === role.title ? "border-blue-500 shadow-xl" : "border-gray-200 hover:border-gray-300"
-              }`}
-              onClick={() => setSelectedRole(role.title)}
+              className="relative overflow-hidden border-2 transition-all duration-300 hover:shadow-2xl hover:scale-105 cursor-pointer border-gray-200 hover:border-gray-300"
             >
               <div className={`absolute top-0 left-0 right-0 h-2 bg-gradient-to-r ${role.color}`} />
               <CardHeader className="text-center pb-4">

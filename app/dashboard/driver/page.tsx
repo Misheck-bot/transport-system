@@ -1,217 +1,350 @@
 "use client"
-import { CreditCard, Truck, FileText, MapPin } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Dialog, DialogTrigger } from "@/components/ui/dialog"
-import { PaymentModal } from "@/components/payment-modal"
-import { useState } from "react"
+
+import { useState, useEffect } from "react"
+import { useSession } from "next-auth/react"
 import Link from "next/link"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
+import { Truck, FileText, Route, CreditCard, CheckCircle, DollarSign } from "lucide-react"
+import { PaymentModal } from "@/components/payment-modal"
+
+interface DashboardStats {
+  totalTrucks: number
+  activeRoutes: number
+  completedTrips: number
+  pendingPayments: number
+  documentsUploaded: number
+  eCardStatus: string
+}
 
 export default function DriverDashboard() {
-  const [showPaymentModal, setShowPaymentModal] = useState(false)
-  const [showECardPayment, setShowECardPayment] = useState(false)
+  const { data: session } = useSession()
+  const [stats, setStats] = useState<DashboardStats>({
+    totalTrucks: 0,
+    activeRoutes: 0,
+    completedTrips: 0,
+    pendingPayments: 0,
+    documentsUploaded: 0,
+    eCardStatus: "pending",
+  })
+  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    // Simulate loading dashboard data
+    const loadDashboardData = async () => {
+      try {
+        // In a real app, this would be API calls
+        await new Promise((resolve) => setTimeout(resolve, 1000))
+        setStats({
+          totalTrucks: 2,
+          activeRoutes: 1,
+          completedTrips: 45,
+          pendingPayments: 2,
+          documentsUploaded: 8,
+          eCardStatus: "approved",
+        })
+      } catch (error) {
+        console.error("Error loading dashboard data:", error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    loadDashboardData()
+  }, [])
+
+  const quickActions = [
+    {
+      title: "My Trucks",
+      description: "View and manage your registered vehicles",
+      icon: Truck,
+      href: "/dashboard/driver/trucks",
+      color: "bg-blue-500",
+      count: stats.totalTrucks,
+    },
+    {
+      title: "Upload Documents",
+      description: "Upload required documents and licenses",
+      icon: FileText,
+      href: "/dashboard/driver/documents",
+      color: "bg-green-500",
+      count: stats.documentsUploaded,
+    },
+    {
+      title: "Plan Route",
+      description: "Plan your next cross-border journey",
+      icon: Route,
+      href: "/dashboard/driver/plan-route",
+      color: "bg-purple-500",
+      count: stats.activeRoutes,
+    },
+    {
+      title: "Make Payment",
+      description: "Pay fees and manage billing",
+      icon: CreditCard,
+      href: "#",
+      color: "bg-orange-500",
+      count: stats.pendingPayments,
+      onClick: () => setIsPaymentModalOpen(true),
+    },
+  ]
+
+  const recentActivities = [
+    {
+      id: 1,
+      type: "route",
+      title: "Route to Toronto completed",
+      description: "Successfully delivered cargo to Toronto, ON",
+      time: "2 hours ago",
+      icon: CheckCircle,
+      color: "text-green-600",
+    },
+    {
+      id: 2,
+      type: "payment",
+      title: "Border crossing fee paid",
+      description: "$45.00 payment processed",
+      time: "1 day ago",
+      icon: DollarSign,
+      color: "text-blue-600",
+    },
+    {
+      id: 3,
+      type: "document",
+      title: "License renewed",
+      description: "Commercial driver's license updated",
+      time: "3 days ago",
+      icon: FileText,
+      color: "text-purple-600",
+    },
+    {
+      id: 4,
+      type: "truck",
+      title: "Vehicle inspection passed",
+      description: "Truck TRK001 passed safety inspection",
+      time: "1 week ago",
+      icon: Truck,
+      color: "text-green-600",
+    },
+  ]
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      </div>
+    )
+  }
 
   return (
-    <>
-      {/* Welcome Section */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Welcome to Your Driver Portal</h1>
-        <p className="text-gray-600">Manage your trucks, documents, and border crossings all in one place.</p>
+    <div className="space-y-6">
+      {/* Welcome Header */}
+      <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg p-6 text-white">
+        <h1 className="text-2xl font-bold mb-2">Welcome back, {session?.user?.name || "Driver"}! 👋</h1>
+        <p className="text-blue-100">Here's what's happening with your trucking operations today.</p>
       </div>
 
-      {/* Quick Stats - Empty State */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-8">
-        <Card className="bg-white border-0 shadow-lg">
+      {/* Stats Overview */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">License Status</CardTitle>
-            <FileText className="h-4 w-4 text-gray-400" />
+            <CardTitle className="text-sm font-medium">Total Trucks</CardTitle>
+            <Truck className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-gray-400">--</div>
-            <p className="text-xs text-gray-500">Upload your license</p>
-          </CardContent>
-        </Card>
-        <Card className="bg-white border-0 shadow-lg">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">E-Card Status</CardTitle>
-            <CreditCard className="h-4 w-4 text-gray-400" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-gray-400">--</div>
-            <p className="text-xs text-gray-500">Apply for E-Card</p>
-          </CardContent>
-        </Card>
-        <Card className="bg-white border-0 shadow-lg">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Border Crossings</CardTitle>
-            <MapPin className="h-4 w-4 text-gray-400" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-gray-400">0</div>
-            <p className="text-xs text-gray-500">No crossings yet</p>
-          </CardContent>
-        </Card>
-        <Card className="bg-white border-0 shadow-lg">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">My Trucks</CardTitle>
-            <Truck className="h-4 w-4 text-gray-400" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-gray-400">0</div>
-            <p className="text-xs text-gray-500">Register your first truck</p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Empty States */}
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 mb-8">
-        {/* Border Crossings - Empty State */}
-        <Card className="lg:col-span-2 bg-white border-0 shadow-lg">
-          <CardHeader className="flex flex-row items-center">
-            <div className="grid gap-2">
-              <CardTitle className="text-gray-900">Border Crossings</CardTitle>
-              <CardDescription>Your border crossing history will appear here.</CardDescription>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="text-center py-12">
-              <MapPin className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">No border crossings yet</h3>
-              <p className="text-gray-500 mb-4">Once you start crossing borders, your history will appear here.</p>
-            </div>
+            <div className="text-2xl font-bold">{stats.totalTrucks}</div>
+            <p className="text-xs text-muted-foreground">+1 from last month</p>
           </CardContent>
         </Card>
 
-        {/* Getting Started */}
-        <Card className="bg-white border-0 shadow-lg">
-          <CardHeader>
-            <CardTitle className="text-gray-900">Getting Started</CardTitle>
-            <CardDescription>Complete these steps to get started</CardDescription>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Active Routes</CardTitle>
+            <Route className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-start gap-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
-              <div className="bg-blue-100 rounded-full w-6 h-6 flex items-center justify-center mt-0.5">
-                <span className="text-blue-600 font-bold text-sm">1</span>
-              </div>
-              <div className="flex-1">
-                <p className="text-sm font-medium text-blue-900">Register Your First Truck</p>
-                <p className="text-xs text-blue-700">Add your vehicle details and documents</p>
-                <Link href="/dashboard/driver/register-truck">
-                  <Button size="sm" className="mt-2 bg-blue-500 hover:bg-blue-600 text-white">
-                    Register Truck
-                  </Button>
-                </Link>
-              </div>
-            </div>
-            <div className="flex items-start gap-3 p-3 bg-orange-50 rounded-lg border border-orange-200">
-              <div className="bg-orange-100 rounded-full w-6 h-6 flex items-center justify-center mt-0.5">
-                <span className="text-orange-600 font-bold text-sm">2</span>
-              </div>
-              <div className="flex-1">
-                <p className="text-sm font-medium text-orange-900">Upload Your License</p>
-                <p className="text-xs text-orange-700">Upload your driving license documents</p>
-                <Link href="/dashboard/driver/upload-license">
-                  <Button size="sm" className="mt-2 bg-orange-500 hover:bg-orange-600 text-white">
-                    Upload License
-                  </Button>
-                </Link>
-              </div>
-            </div>
-            <div className="flex items-start gap-3 p-3 bg-green-50 rounded-lg border border-green-200">
-              <div className="bg-green-100 rounded-full w-6 h-6 flex items-center justify-center mt-0.5">
-                <span className="text-green-600 font-bold text-sm">3</span>
-              </div>
-              <div className="flex-1">
-                <p className="text-sm font-medium text-green-900">Apply for E-Card</p>
-                <p className="text-xs text-green-700">Get your digital border crossing card</p>
-                <Dialog open={showECardPayment} onOpenChange={setShowECardPayment}>
-                  <DialogTrigger asChild>
-                    <Button size="sm" className="mt-2 bg-green-500 hover:bg-green-600 text-white">
-                      Apply Now
-                    </Button>
-                  </DialogTrigger>
-                  <PaymentModal
-                    amount="K500"
-                    description="E-Card Application Fee"
-                    onSuccess={() => setShowECardPayment(false)}
-                  />
-                </Dialog>
-              </div>
-            </div>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats.activeRoutes}</div>
+            <p className="text-xs text-muted-foreground">Currently in progress</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Completed Trips</CardTitle>
+            <CheckCircle className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats.completedTrips}</div>
+            <p className="text-xs text-muted-foreground">+12% from last month</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Pending Payments</CardTitle>
+            <DollarSign className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats.pendingPayments}</div>
+            <p className="text-xs text-muted-foreground">$125.00 total</p>
           </CardContent>
         </Card>
       </div>
+
+      {/* E-Card Status */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <CreditCard className="h-5 w-5" />
+            E-Card Status
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-muted-foreground">Your E-Card application status</p>
+              <div className="flex items-center gap-2 mt-1">
+                <Badge variant={stats.eCardStatus === "approved" ? "default" : "secondary"}>
+                  {stats.eCardStatus === "approved" ? "Approved" : "Pending"}
+                </Badge>
+                {stats.eCardStatus === "approved" && <CheckCircle className="h-4 w-4 text-green-600" />}
+              </div>
+            </div>
+            {stats.eCardStatus !== "approved" && (
+              <Button onClick={() => setIsPaymentModalOpen(true)}>Apply for E-Card</Button>
+            )}
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Quick Actions */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Link href="/dashboard/driver/register-truck">
-          <Card className="bg-gradient-to-r from-blue-500 to-blue-600 text-white border-0 shadow-lg hover:shadow-xl transition-shadow cursor-pointer">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        {quickActions.map((action, index) => (
+          <Card key={index} className="hover:shadow-md transition-shadow cursor-pointer">
             <CardContent className="p-6">
-              <div className="flex items-center gap-4">
-                <div className="bg-white/20 p-3 rounded-lg">
-                  <Truck className="h-6 w-6" />
-                </div>
-                <div>
-                  <h3 className="font-semibold">Register Truck</h3>
-                  <p className="text-sm text-blue-100">Add a new vehicle</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </Link>
-        <Link href="/dashboard/driver/documents">
-          <Card className="bg-gradient-to-r from-green-500 to-green-600 text-white border-0 shadow-lg hover:shadow-xl transition-shadow cursor-pointer">
-            <CardContent className="p-6">
-              <div className="flex items-center gap-4">
-                <div className="bg-white/20 p-3 rounded-lg">
-                  <FileText className="h-6 w-6" />
-                </div>
-                <div>
-                  <h3 className="font-semibold">Upload Documents</h3>
-                  <p className="text-sm text-green-100">Add your documents</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </Link>
-        <Link href="/dashboard/driver/plan-route">
-          <Card className="bg-gradient-to-r from-purple-500 to-purple-600 text-white border-0 shadow-lg hover:shadow-xl transition-shadow cursor-pointer">
-            <CardContent className="p-6">
-              <div className="flex items-center gap-4">
-                <div className="bg-white/20 p-3 rounded-lg">
-                  <MapPin className="h-6 w-6" />
-                </div>
-                <div>
-                  <h3 className="font-semibold">Plan Route</h3>
-                  <p className="text-sm text-purple-100">Border crossing route</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </Link>
-        <Dialog open={showPaymentModal} onOpenChange={setShowPaymentModal}>
-          <DialogTrigger asChild>
-            <Card className="bg-gradient-to-r from-orange-500 to-orange-600 text-white border-0 shadow-lg hover:shadow-xl transition-shadow cursor-pointer">
-              <CardContent className="p-6">
-                <div className="flex items-center gap-4">
-                  <div className="bg-white/20 p-3 rounded-lg">
-                    <CreditCard className="h-6 w-6" />
+              {action.onClick ? (
+                <div onClick={action.onClick}>
+                  <div className={`${action.color} w-12 h-12 rounded-lg flex items-center justify-center mb-4`}>
+                    <action.icon className="h-6 w-6 text-white" />
                   </div>
-                  <div>
-                    <h3 className="font-semibold">Make Payment</h3>
-                    <p className="text-sm text-orange-100">Pay fees & taxes</p>
+                  <h3 className="font-semibold mb-2">{action.title}</h3>
+                  <p className="text-sm text-muted-foreground mb-3">{action.description}</p>
+                  <div className="flex items-center justify-between">
+                    <Badge variant="secondary">{action.count}</Badge>
+                    <Button size="sm">Open</Button>
                   </div>
                 </div>
-              </CardContent>
-            </Card>
-          </DialogTrigger>
-          <PaymentModal
-            amount="Select Amount"
-            description="Choose payment type: Insurance, Road Tax, or License Renewal"
-            onSuccess={() => setShowPaymentModal(false)}
-          />
-        </Dialog>
+              ) : (
+                <Link href={action.href}>
+                  <div className={`${action.color} w-12 h-12 rounded-lg flex items-center justify-center mb-4`}>
+                    <action.icon className="h-6 w-6 text-white" />
+                  </div>
+                  <h3 className="font-semibold mb-2">{action.title}</h3>
+                  <p className="text-sm text-muted-foreground mb-3">{action.description}</p>
+                  <div className="flex items-center justify-between">
+                    <Badge variant="secondary">{action.count}</Badge>
+                    <Button size="sm">View</Button>
+                  </div>
+                </Link>
+              )}
+            </CardContent>
+          </Card>
+        ))}
       </div>
-    </>
+
+      {/* Getting Started Section */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Getting Started</CardTitle>
+          <CardDescription>Complete these steps to get the most out of your account</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between p-4 border rounded-lg">
+            <div className="flex items-center gap-3">
+              <div className="bg-blue-100 p-2 rounded-full">
+                <Truck className="h-4 w-4 text-blue-600" />
+              </div>
+              <div>
+                <p className="font-medium">Register Your First Truck</p>
+                <p className="text-sm text-muted-foreground">Add your vehicle information to start hauling</p>
+              </div>
+            </div>
+            <Link href="/dashboard/driver/register-truck">
+              <Button size="sm">Register Truck</Button>
+            </Link>
+          </div>
+
+          <div className="flex items-center justify-between p-4 border rounded-lg">
+            <div className="flex items-center gap-3">
+              <div className="bg-green-100 p-2 rounded-full">
+                <FileText className="h-4 w-4 text-green-600" />
+              </div>
+              <div>
+                <p className="font-medium">Upload Required Documents</p>
+                <p className="text-sm text-muted-foreground">Upload your license and insurance documents</p>
+              </div>
+            </div>
+            <Link href="/dashboard/driver/documents">
+              <Button size="sm" variant="outline">
+                Upload Documents
+              </Button>
+            </Link>
+          </div>
+
+          <div className="flex items-center justify-between p-4 border rounded-lg">
+            <div className="flex items-center gap-3">
+              <div className="bg-purple-100 p-2 rounded-full">
+                <CreditCard className="h-4 w-4 text-purple-600" />
+              </div>
+              <div>
+                <p className="font-medium">Apply for E-Card</p>
+                <p className="text-sm text-muted-foreground">Get your electronic border crossing card</p>
+              </div>
+            </div>
+            <Button size="sm" variant="outline" onClick={() => setIsPaymentModalOpen(true)}>
+              Apply Now
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Recent Activity */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Recent Activity</CardTitle>
+          <CardDescription>Your latest actions and updates</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            {recentActivities.map((activity) => (
+              <div key={activity.id} className="flex items-start gap-3 p-3 rounded-lg hover:bg-muted/50">
+                <div className={`p-2 rounded-full bg-muted ${activity.color}`}>
+                  <activity.icon className="h-4 w-4" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium">{activity.title}</p>
+                  <p className="text-sm text-muted-foreground">{activity.description}</p>
+                  <p className="text-xs text-muted-foreground mt-1">{activity.time}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Payment Modal */}
+      {isPaymentModalOpen && (
+        <PaymentModal
+          amount="75"
+          description="E-Card Application Fee"
+          onSuccess={() => {
+            setIsPaymentModalOpen(false)
+            // Handle successful payment
+          }}
+        />
+      )}
+    </div>
   )
 }
