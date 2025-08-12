@@ -1,164 +1,88 @@
 import { type NextRequest, NextResponse } from "next/server"
-
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 
-// Mock driver data - replace with actual database queries
+// Mock driver data for demonstration
 const mockDrivers = [
   {
-    _id: "67890abcdef123456789012",
-    firstName: "John",
-    lastName: "Martinez",
-    email: "john.martinez@email.com",
+    id: "1",
+    name: "John Smith",
+    licenseNumber: "DL123456789",
     phone: "+1-555-0123",
-    licenseNumber: "CDL-123456",
-    licenseExpiry: "2025-12-31",
+    email: "john.smith@email.com",
     status: "active",
-    createdAt: "2024-01-10T00:00:00.000Z",
-    trucks: [
-      {
-        _id: "truck123",
-        make: "Freightliner",
-        model: "Cascadia",
-        plateNumber: "ABC-123",
-        year: 2022,
-      },
-    ],
-    ecards: [
-      {
-        _id: "ecard123",
-        cardNumber: "EC-2024-001",
-        status: "active",
-        expiryDate: "2025-12-31",
-      },
-    ],
-    documents: [
-      {
-        type: "license",
-        status: "verified",
-        uploadedAt: "2024-01-10T00:00:00.000Z",
-      },
-      {
-        type: "insurance",
-        status: "pending",
-        uploadedAt: "2024-01-12T00:00:00.000Z",
-      },
-    ],
+    lastCrossing: "2024-01-15T10:30:00Z",
+    violations: 0,
+    truckId: "TRK001",
+    route: "US-Canada Border",
+    experience: "5 years",
+    rating: 4.8,
+    totalTrips: 156,
+    documents: {
+      license: { status: "valid", expiry: "2025-12-31" },
+      medical: { status: "valid", expiry: "2024-06-30" },
+      insurance: { status: "valid", expiry: "2024-12-31" },
+    },
   },
   {
-    _id: "67890abcdef123456789013",
-    firstName: "Maria",
-    lastName: "Rodriguez",
-    email: "maria.rodriguez@email.com",
+    id: "2",
+    name: "Maria Garcia",
+    licenseNumber: "DL987654321",
     phone: "+1-555-0124",
-    licenseNumber: "CDL-123457",
-    licenseExpiry: "2025-11-30",
-    status: "pending",
-    createdAt: "2024-01-12T00:00:00.000Z",
-    trucks: [
-      {
-        _id: "truck124",
-        make: "Peterbilt",
-        model: "579",
-        plateNumber: "XYZ-789",
-        year: 2021,
-      },
-    ],
-    ecards: [
-      {
-        _id: "ecard124",
-        cardNumber: "EC-2024-002",
-        status: "pending",
-        expiryDate: "2025-11-30",
-      },
-    ],
-    documents: [
-      {
-        type: "license",
-        status: "verified",
-        uploadedAt: "2024-01-12T00:00:00.000Z",
-      },
-    ],
-  },
-  {
-    _id: "67890abcdef123456789014",
-    firstName: "Carlos",
-    lastName: "Silva",
-    email: "carlos.silva@email.com",
-    phone: "+1-555-0125",
-    licenseNumber: "CDL-123458",
-    licenseExpiry: "2026-01-15",
+    email: "maria.garcia@email.com",
     status: "active",
-    createdAt: "2024-01-08T00:00:00.000Z",
-    trucks: [
-      {
-        _id: "truck125",
-        make: "Kenworth",
-        model: "T680",
-        plateNumber: "DEF-456",
-        year: 2023,
-      },
-    ],
-    ecards: [
-      {
-        _id: "ecard125",
-        cardNumber: "EC-2024-003",
-        status: "active",
-        expiryDate: "2026-01-15",
-      },
-    ],
-    documents: [
-      {
-        type: "license",
-        status: "verified",
-        uploadedAt: "2024-01-08T00:00:00.000Z",
-      },
-      {
-        type: "insurance",
-        status: "verified",
-        uploadedAt: "2024-01-08T00:00:00.000Z",
-      },
-      {
-        type: "registration",
-        status: "verified",
-        uploadedAt: "2024-01-08T00:00:00.000Z",
-      },
-    ],
+    lastCrossing: "2024-01-14T15:45:00Z",
+    violations: 1,
+    truckId: "TRK002",
+    route: "US-Mexico Border",
+    experience: "8 years",
+    rating: 4.9,
+    totalTrips: 203,
+    documents: {
+      license: { status: "valid", expiry: "2025-08-15" },
+      medical: { status: "expiring", expiry: "2024-02-28" },
+      insurance: { status: "valid", expiry: "2024-11-30" },
+    },
   },
   {
-    _id: "67890abcdef123456789015",
-    firstName: "Ana",
-    lastName: "Gutierrez",
-    email: "ana.gutierrez@email.com",
-    phone: "+1-555-0126",
-    licenseNumber: "CDL-123459",
-    licenseExpiry: "2025-10-20",
+    id: "3",
+    name: "David Johnson",
+    licenseNumber: "DL456789123",
+    phone: "+1-555-0125",
+    email: "david.johnson@email.com",
     status: "suspended",
-    createdAt: "2024-01-05T00:00:00.000Z",
-    trucks: [
-      {
-        _id: "truck126",
-        make: "Volvo",
-        model: "VNL",
-        plateNumber: "GHI-789",
-        year: 2020,
-      },
-    ],
-    ecards: [
-      {
-        _id: "ecard126",
-        cardNumber: "EC-2024-004",
-        status: "suspended",
-        expiryDate: "2025-10-20",
-      },
-    ],
-    documents: [
-      {
-        type: "license",
-        status: "expired",
-        uploadedAt: "2024-01-05T00:00:00.000Z",
-      },
-    ],
+    lastCrossing: "2024-01-10T08:20:00Z",
+    violations: 3,
+    truckId: "TRK003",
+    route: "Interstate 95",
+    experience: "3 years",
+    rating: 3.2,
+    totalTrips: 89,
+    documents: {
+      license: { status: "expired", expiry: "2023-12-31" },
+      medical: { status: "valid", expiry: "2024-09-30" },
+      insurance: { status: "valid", expiry: "2024-10-31" },
+    },
+  },
+  {
+    id: "4",
+    name: "Sarah Wilson",
+    licenseNumber: "DL789123456",
+    phone: "+1-555-0126",
+    email: "sarah.wilson@email.com",
+    status: "active",
+    lastCrossing: "2024-01-12T12:15:00Z",
+    violations: 0,
+    truckId: "TRK004",
+    route: "US-Canada Border",
+    experience: "7 years",
+    rating: 4.7,
+    totalTrips: 178,
+    documents: {
+      license: { status: "valid", expiry: "2025-03-20" },
+      medical: { status: "valid", expiry: "2024-08-15" },
+      insurance: { status: "valid", expiry: "2024-09-30" },
+    },
   },
 ]
 
@@ -170,10 +94,43 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    // In a real app, you would fetch from your database
-    // const drivers = await db.collection('drivers').find({}).toArray()
+    const { searchParams } = new URL(request.url)
+    const search = searchParams.get("search")
+    const status = searchParams.get("status")
+    const page = Number.parseInt(searchParams.get("page") || "1")
+    const limit = Number.parseInt(searchParams.get("limit") || "10")
 
-    return NextResponse.json(mockDrivers)
+    let filteredDrivers = mockDrivers
+
+    // Apply search filter
+    if (search) {
+      const searchLower = search.toLowerCase()
+      filteredDrivers = filteredDrivers.filter(
+        (driver) =>
+          driver.name.toLowerCase().includes(searchLower) ||
+          driver.licenseNumber.toLowerCase().includes(searchLower) ||
+          driver.email.toLowerCase().includes(searchLower) ||
+          driver.phone.includes(search),
+      )
+    }
+
+    // Apply status filter
+    if (status && status !== "all") {
+      filteredDrivers = filteredDrivers.filter((driver) => driver.status === status)
+    }
+
+    // Apply pagination
+    const startIndex = (page - 1) * limit
+    const endIndex = startIndex + limit
+    const paginatedDrivers = filteredDrivers.slice(startIndex, endIndex)
+
+    return NextResponse.json({
+      drivers: paginatedDrivers,
+      total: filteredDrivers.length,
+      page,
+      totalPages: Math.ceil(filteredDrivers.length / limit),
+      hasMore: endIndex < filteredDrivers.length,
+    })
   } catch (error) {
     console.error("Error fetching drivers:", error)
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
@@ -189,20 +146,66 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
+    const { action, driverId, data } = body
 
-    // In a real app, you would create a new driver in your database
-    // const newDriver = await db.collection('drivers').insertOne(body)
+    switch (action) {
+      case "suspend":
+        // Mock suspend driver
+        const suspendReason = data?.reason || "Violation of regulations"
+        return NextResponse.json({
+          success: true,
+          message: `Driver ${driverId} has been suspended. Reason: ${suspendReason}`,
+          driver: {
+            id: driverId,
+            status: "suspended",
+            suspendedAt: new Date().toISOString(),
+            suspendReason,
+          },
+        })
 
-    const newDriver = {
-      _id: Date.now().toString(),
-      ...body,
-      createdAt: new Date().toISOString(),
-      status: "pending",
+      case "activate":
+        // Mock activate driver
+        return NextResponse.json({
+          success: true,
+          message: `Driver ${driverId} has been activated`,
+          driver: {
+            id: driverId,
+            status: "active",
+            activatedAt: new Date().toISOString(),
+          },
+        })
+
+      case "update":
+        // Mock update driver information
+        return NextResponse.json({
+          success: true,
+          message: `Driver ${driverId} information has been updated`,
+          driver: {
+            id: driverId,
+            ...data,
+            updatedAt: new Date().toISOString(),
+          },
+        })
+
+      case "flag":
+        // Mock flag driver for review
+        const flagReason = data?.reason || "Requires manual review"
+        return NextResponse.json({
+          success: true,
+          message: `Driver ${driverId} has been flagged for review`,
+          driver: {
+            id: driverId,
+            flagged: true,
+            flaggedAt: new Date().toISOString(),
+            flagReason,
+          },
+        })
+
+      default:
+        return NextResponse.json({ error: "Invalid action" }, { status: 400 })
     }
-
-    return NextResponse.json(newDriver, { status: 201 })
   } catch (error) {
-    console.error("Error creating driver:", error)
+    console.error("Error processing driver action:", error)
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
 }
