@@ -1,7 +1,7 @@
-import type { Config } from "tailwindcss"
+import type { Config } from "tailwindcss";
+import { fontFamily } from "tailwindcss/defaultTheme";
 
-// all in fixtures is set to tailwind v3 as interims solutions
-
+// Tailwind config
 const config: Config = {
   darkMode: ["class"],
   content: [
@@ -12,6 +12,10 @@ const config: Config = {
   ],
   theme: {
     extend: {
+      fontFamily: {
+        // Use Inter via Next.js variable font setup
+        sans: ["var(--font-sans)", ...fontFamily.sans],
+      },
       colors: {
         background: "hsl(var(--background))",
         foreground: "hsl(var(--foreground))",
@@ -64,14 +68,8 @@ const config: Config = {
           ring: "hsl(var(--sidebar-ring))",
         },
         brand: {
-          blue: {
-            DEFAULT: "#007AFF",
-            light: "#EBF5FF",
-          },
-          purple: {
-            DEFAULT: "#7B61FF",
-            light: "#F2F0FF",
-          },
+          blue: { DEFAULT: "#007AFF", light: "#EBF5FF" },
+          purple: { DEFAULT: "#7B61FF", light: "#F2F0FF" },
         },
       },
       borderRadius: {
@@ -81,20 +79,12 @@ const config: Config = {
       },
       keyframes: {
         "accordion-down": {
-          from: {
-            height: "0",
-          },
-          to: {
-            height: "var(--radix-accordion-content-height)",
-          },
+          from: { height: "0" },
+          to: { height: "var(--radix-accordion-content-height)" },
         },
         "accordion-up": {
-          from: {
-            height: "var(--radix-accordion-content-height)",
-          },
-          to: {
-            height: "0",
-          },
+          from: { height: "var(--radix-accordion-content-height)" },
+          to: { height: "0" },
         },
       },
       animation: {
@@ -104,5 +94,6 @@ const config: Config = {
     },
   },
   plugins: [require("tailwindcss-animate")],
-}
-export default config
+};
+
+export default config;
