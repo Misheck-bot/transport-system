@@ -2,7 +2,6 @@ import { type NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 
-// Mock driver data for demonstration
 const mockDrivers = [
   {
     id: "1",
@@ -102,7 +101,6 @@ export async function GET(request: NextRequest) {
 
     let filteredDrivers = mockDrivers
 
-    // Apply search filter
     if (search) {
       const searchLower = search.toLowerCase()
       filteredDrivers = filteredDrivers.filter(
@@ -114,12 +112,10 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // Apply status filter
     if (status && status !== "all") {
       filteredDrivers = filteredDrivers.filter((driver) => driver.status === status)
     }
 
-    // Apply pagination
     const startIndex = (page - 1) * limit
     const endIndex = startIndex + limit
     const paginatedDrivers = filteredDrivers.slice(startIndex, endIndex)
@@ -150,7 +146,6 @@ export async function POST(request: NextRequest) {
 
     switch (action) {
       case "suspend":
-        // Mock suspend driver
         const suspendReason = data?.reason || "Violation of regulations"
         return NextResponse.json({
           success: true,
@@ -164,7 +159,6 @@ export async function POST(request: NextRequest) {
         })
 
       case "activate":
-        // Mock activate driver
         return NextResponse.json({
           success: true,
           message: `Driver ${driverId} has been activated`,
@@ -176,7 +170,6 @@ export async function POST(request: NextRequest) {
         })
 
       case "update":
-        // Mock update driver information
         return NextResponse.json({
           success: true,
           message: `Driver ${driverId} information has been updated`,
@@ -188,7 +181,6 @@ export async function POST(request: NextRequest) {
         })
 
       case "flag":
-        // Mock flag driver for review
         const flagReason = data?.reason || "Requires manual review"
         return NextResponse.json({
           success: true,
